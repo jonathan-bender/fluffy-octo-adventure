@@ -1,10 +1,9 @@
 
 % consts
-PATH='C:\Profilometer_Data\2022-04-17_18-07-46';
+PATH='C:\Profilometer_Data\2022-11-13_19-11-41';
 PLOT_POINTS = 500000;
 SMOOTHING = 21;
-MAX_RATIO = 1.03;
-MIN_RATIO = 1 / MAX_RATIO;
+MAX_READ = 10;
 RANGE_ROW = [];
 RANGE_COLUMN = [];
 
@@ -65,6 +64,11 @@ if size(RANGE_COLUMN,2) > 1
     columnCount = size(RANGE_COLUMN,2);
 end
 
+% fix slope
+avgRead = sum(read) / rowCount;
+linearParams = polyfit(1:columnCount, avgRead, 1);
+read = read - polyval(linearParams, 1:columnCount);
+
 smoothed = zeros(size(read));
 for i=1:rowCount
     smoothed(i,:) = smooth(read(i,:),SMOOTHING);
@@ -73,23 +77,25 @@ end
 for i=1:rowCount
     for j=1:columnCount
         currentRead = read(i,j);
-        currentRatio = currentRead / smoothed(i,j);
-        if currentRatio > MAX_RATIO
-            read(i,j) = currentRead * MAX_RATIO;
+        if currentRead > MAX_READ
+            currentRead = MAX_READ;
         end
         
-        if currentRatio < MIN_RATIO
-            read(i,j) = currentRead * MIN_RATIO;
+        if currentRead < -MAX_READ
+            currentRead = -MAX_READ;
         end
+        
+        read(i,j) = currentRead;
     end
 end
+
 
 roughness = abs(read - smoothed);
 
 currentPoints = rowCount * columnCount;
 if currentPoints > PLOT_POINTS
     resizeRatio = round(PLOT_POINTS/ rowCount);
-    height = imresize(height, [rowCount resizeRatio]);
+    read = imresize(read, [rowCount resizeRatio]);
     roughness = imresize(roughness, [rowCount resizeRatio]);
 end
 

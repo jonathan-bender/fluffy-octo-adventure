@@ -1,10 +1,12 @@
 
 % consts
-PATH='C:\Profilometer_Data\2022-10-19_23-15-17';
+PATH='C:\Profilometer_Data\2022-04-17_18-07-46';
 PLOT_POINTS = 500000;
-SMOOTHING = 15;
-MAX_RATIO = 10;
+SMOOTHING = 21;
+MAX_RATIO = 1.03;
 MIN_RATIO = 1 / MAX_RATIO;
+RANGE_ROW = [];
+RANGE_COLUMN = [];
 
 % read data
 opts = delimitedTextImportOptions('NumVariables', 5);
@@ -53,6 +55,16 @@ for i=1:rowCount
     end
 end
 
+if size(RANGE_ROW,2) > 1
+    read = read(RANGE_ROW,:);
+    rowCount = size(RANGE_ROW,2);
+end
+
+if size(RANGE_COLUMN,2) > 1
+    read = read(:,RANGE_COLUMN);
+    columnCount = size(RANGE_COLUMN,2);
+end
+
 smoothed = zeros(size(read));
 for i=1:rowCount
     smoothed(i,:) = smooth(read(i,:),SMOOTHING);
@@ -74,14 +86,30 @@ end
 
 roughness = abs(read - smoothed);
 
-currentPoints = rowCount * ColumnCount;
+currentPoints = rowCount * columnCount;
 if currentPoints > PLOT_POINTS
     resizeRatio = round(PLOT_POINTS/ rowCount);
     height = imresize(height, [rowCount resizeRatio]);
     roughness = imresize(roughness, [rowCount resizeRatio]);
 end
 
+totalHeight = num2str(yScale * (rowCount - 1));
+totalWidth = num2str(xScale * (columnCount - 1));
+
 % plot height
-image(read);
-image(roughness);
-disp(mean(mean(roughness)));
+tiledlayout(2,1);
+nexttile
+imagesc(read);
+colorbar
+xlabel([totalWidth ' cm']);
+ylabel([totalHeight ' mm']);
+title('Profile');
+nexttile
+imagesc(roughness);
+colorbar
+xlabel([totalWidth ' cm']);
+ylabel([totalHeight ' mm']);
+title('Average Roughness');
+
+% print roughness
+disp(['Average Roughness: ', num2str(2 * mean(max(roughness))), ' microns']);

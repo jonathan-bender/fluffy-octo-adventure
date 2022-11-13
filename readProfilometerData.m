@@ -2,6 +2,9 @@
 % consts
 PATH='C:\Profilometer_Data\2022-10-19_23-15-17';
 PLOT_POINTS = 500000;
+SMOOTHING = 15;
+MAX_RATIO = 10;
+MIN_RATIO = 1 / MAX_RATIO;
 
 % read data
 opts = delimitedTextImportOptions('NumVariables', 5);
@@ -50,12 +53,35 @@ for i=1:rowCount
     end
 end
 
-
-% plot height
-currentPoints = size(read,1) * size(read,2);
-if currentPoints > PLOT_POINTS
-    resizeRatio = 1 / sqrt(currentPoints / PLOT_POINTS);
-    read = imresize(read, resizeRatio);
+smoothed = zeros(size(read));
+for i=1:rowCount
+    smoothed(i,:) = smooth(read(i,:),SMOOTHING);
 end
 
+for i=1:rowCount
+    for j=1:columnCount
+        currentRead = read(i,j);
+        currentRatio = currentRead / smoothed(i,j);
+        if currentRatio > MAX_RATIO
+            read(i,j) = currentRead * MAX_RATIO;
+        end
+        
+        if currentRatio < MIN_RATIO
+            read(i,j) = currentRead * MIN_RATIO;
+        end
+    end
+end
+
+roughness = abs(read - smoothed);
+
+currentPoints = rowCount * ColumnCount;
+if currentPoints > PLOT_POINTS
+    resizeRatio = round(PLOT_POINTS/ rowCount);
+    height = imresize(height, [rowCount resizeRatio]);
+    roughness = imresize(roughness, [rowCount resizeRatio]);
+end
+
+% plot height
 image(read);
+image(roughness);
+disp(mean(mean(roughness)));

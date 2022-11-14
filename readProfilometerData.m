@@ -1,10 +1,10 @@
 
 % consts
-PATH='C:\Profilometer_Data\2022-11-13_19-11-41';
-PLOT_POINTS = 500000;
+PATH='C:\Profilometer_Data\2022-11-14_16-54-50';
+PLOT_POINTS = 5000;
 SMOOTHING = 21;
 MAX_READ = 10;
-RANGE_ROW = [];
+RANGE_ROW = 1:10;
 RANGE_COLUMN = [];
 
 % read data
@@ -65,14 +65,11 @@ if size(RANGE_COLUMN,2) > 1
 end
 
 % fix slope
-avgRead = sum(read) / rowCount;
-linearParams = polyfit(1:columnCount, avgRead, 1);
-read = read - polyval(linearParams, 1:columnCount);
-
-smoothed = zeros(size(read));
 for i=1:rowCount
-    smoothed(i,:) = smooth(read(i,:),SMOOTHING);
+    linearParams = polyfit(1:columnCount, read(i,:), 1);
+    read(i,:) = read(i,:) - polyval(linearParams, 1:columnCount);
 end
+
 
 for i=1:rowCount
     for j=1:columnCount
@@ -90,6 +87,11 @@ for i=1:rowCount
 end
 
 
+smoothed = zeros(size(read));
+for i=1:rowCount
+    smoothed(i,:) = smooth(read(i,:),SMOOTHING);
+end
+
 roughness = abs(read - smoothed);
 
 currentPoints = rowCount * columnCount;
@@ -101,21 +103,33 @@ end
 
 totalHeight = num2str(yScale * (rowCount - 1));
 totalWidth = num2str(xScale * (columnCount - 1));
+avgRoughness = 2 * mean(mean(roughness));
 
 % plot height
-tiledlayout(2,1);
+tiledlayout(3,1);
 nexttile
+
+
 imagesc(read);
 colorbar
-xlabel([totalWidth ' cm']);
+xlabel([totalWidth ' mm']);
 ylabel([totalHeight ' mm']);
 title('Profile');
 nexttile
 imagesc(roughness);
 colorbar
-xlabel([totalWidth ' cm']);
+caxis([0, 2* avgRoughness]);
+xlabel([totalWidth ' mm']);
 ylabel([totalHeight ' mm']);
 title('Average Roughness');
+nexttile
+midRow = round(rowCount / 2);
+plot(read(midRow,:));
+xlabel([totalWidth ' mm']);
+ylabel('Height');
+title(['Height - row ' num2str(midRow)]);
+
+
 
 % print roughness
-disp(['Average Roughness: ', num2str(2 * mean(max(roughness))), ' microns']);
+disp(['Average Roughness: ', num2str(avgRoughness), ' microns']);
